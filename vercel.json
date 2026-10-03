@@ -4,14 +4,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/proxy-thumbnail",
-      "destination": "/api/proxy-thumbnail"
-    },
-    {
-      "source": "/api/video-stream",
-      "destination": "/api/video-stream"
-    },
-    {
       "source": "/((?!api/|media/).*)",
       "destination": "/index.html"
     }

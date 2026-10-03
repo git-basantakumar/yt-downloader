@@ -1,0 +1,6 @@
+{
+  "name": "AuraStream — High-Definition Media Downloader",
+  "description": "Ultra-clean minimalist YouTube audio/video and Instagram post/reel downloader with 4K UHD, 1080p 60fps, and 320kbps audio support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

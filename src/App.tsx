@@ -4,6 +4,7 @@ import { HeroSearch } from './components/HeroSearch';
 import { MediaResultCard } from './components/MediaResultCard';
 import { AudioTrimmerModal } from './components/AudioTrimmerModal';
 import { DownloadProgressModal } from './components/DownloadProgressModal';
+import { BackendSettingsModal } from './components/BackendSettingsModal';
 import { Toast } from './components/Toast';
 
 import {
@@ -34,6 +35,8 @@ export default function App() {
 
   // Modals state
   const [isTrimmerOpen, setIsTrimmerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [statusRefreshKey, setStatusRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Download progress overlay state
@@ -282,7 +285,11 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-[#090A0F] text-[#ECEEF2]">
       {/* Clean Minimal Navbar */}
-      <Navbar onQuickPaste={handleQuickPaste} />
+      <Navbar
+        onQuickPaste={handleQuickPaste}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        statusRefreshKey={statusRefreshKey}
+      />
 
       {/* Main Content */}
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-14">
@@ -366,6 +373,16 @@ export default function App() {
         isComplete={downloadModal.isComplete}
         onCancel={() => setDownloadModal((prev) => ({ ...prev, isOpen: false }))}
         onClose={() => setDownloadModal((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Backend Settings Modal */}
+      <BackendSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSaved={() => {
+          setStatusRefreshKey((k) => k + 1);
+          showToast('Backend configuration saved.');
+        }}
       />
 
       {/* Minimalist Floating Toast */}

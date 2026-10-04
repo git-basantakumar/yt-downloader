@@ -403,6 +403,8 @@ async function parseInstagram(id: string, rawUrl: string, type: MediaType): Prom
   };
 }
 
+import { getApiBaseUrl } from './downloadEngine';
+
 export async function parseMediaUrl(url: string): Promise<ParsedMedia> {
   const detected = detectPlatform(url);
   if (!detected) {
@@ -411,7 +413,8 @@ export async function parseMediaUrl(url: string): Promise<ParsedMedia> {
 
   // First try the real yt-dlp backend extraction
   try {
-    const infoRes = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
+    const baseUrl = getApiBaseUrl();
+    const infoRes = await fetch(`${baseUrl}/api/info?url=${encodeURIComponent(url)}`);
     if (infoRes.ok) {
       const json = await infoRes.json();
       if (json.success && json.data) {

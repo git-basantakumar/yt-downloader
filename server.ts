@@ -16,6 +16,17 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Global CORS middleware
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Authorization');
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    next();
+  });
+
   // Static media folder for pre-rendered fallback assets
   const mediaDir = path.resolve(__dirname, 'public/media');
   if (!fs.existsSync(mediaDir)) {
@@ -610,7 +621,7 @@ async function startServer() {
 
   // Health check
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: Date.now() });
+    res.json({ status: 'ok', engine: 'yt-dlp', ytDlpAvailable: true, timestamp: Date.now() });
   });
 
   // Mount Vite middlewares in development

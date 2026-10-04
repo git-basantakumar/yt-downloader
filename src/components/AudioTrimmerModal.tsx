@@ -8,6 +8,7 @@ import {
   saveDownloadToHistory,
   fetchOriginalThumbnailBlob,
   embedId3v2TagsWithCover,
+  getApiBaseUrl,
 } from '../services/downloadEngine';
 
 interface AudioTrimmerModalProps {
@@ -61,7 +62,8 @@ export const AudioTrimmerModal: React.FC<AudioTrimmerModalProps> = ({
       // 1. Try real backend audio trimming using yt-dlp & ffmpeg
       if (media.originalUrl) {
         try {
-          const trimUrl = `/api/trim-audio?url=${encodeURIComponent(media.originalUrl)}&startTime=${startTime}&endTime=${endTime}&format=${selectedFormat}&bitrate=${bitrate}&title=${encodeURIComponent(customTitle)}&artist=${encodeURIComponent(customArtist)}`;
+          const baseUrl = getApiBaseUrl();
+          const trimUrl = `${baseUrl}/api/trim-audio?url=${encodeURIComponent(media.originalUrl)}&startTime=${startTime}&endTime=${endTime}&format=${selectedFormat}&bitrate=${bitrate}&title=${encodeURIComponent(customTitle)}&artist=${encodeURIComponent(customArtist)}`;
           const trimRes = await fetch(trimUrl);
           if (trimRes.ok) {
             finalBlob = await trimRes.blob();

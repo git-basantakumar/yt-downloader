@@ -2,6 +2,49 @@ import JSZip from 'jszip';
 import { DownloadHistoryItem, PlatformType, MediaType, ParsedMedia, CarouselSlide } from '../types/media';
 
 const HISTORY_KEY = 'aurastream_download_history_v1';
+const BACKEND_KEY = 'aurastream_backend_url';
+
+export function getApiBaseUrl(): string {
+  try {
+    const custom = localStorage.getItem(BACKEND_KEY);
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/$/, '');
+    }
+  } catch {}
+
+  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim().replace(/\/$/, '');
+  }
+
+  return '';
+}
+
+export function setCustomBackendUrl(url: string): void {
+  try {
+    if (!url.trim()) {
+      localStorage.removeItem(BACKEND_KEY);
+    } else {
+      localStorage.setItem(BACKEND_KEY, url.trim().replace(/\/$/, ''));
+    }
+  } catch (e) {
+    console.warn('Failed to save backend URL', e);
+  }
+}
+
+export async function testBackendHealth(customUrl?: string): Promise<{ ok: boolean; message: string }> {
+  const base = customUrl !== undefined ? customUrl.trim().replace(/\/$/, '') : getApiBaseUrl();
+  try {
+    const res = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, message: data.engine ? `yt-dlp Engine (${data.engine})` : 'Backend Active' };
+    }
+    return { ok: false, message: `HTTP ${res.status}` };
+  } catch (e: any) {
+    return { ok: false, message: e.message || 'Connection failed' };
+  }
+}
 
 export function getDownloadHistory(): DownloadHistoryItem[] {
   try {
@@ -50,7 +93,8 @@ export function clearDownloadHistory(): void {
 export async function fetchOriginalThumbnailBlob(thumbnailUrl: string): Promise<Blob> {
   // 1. Try local server proxy (handles CORS and referrers cleanly)
   try {
-    const proxyUrl = `/api/proxy-thumbnail?url=${encodeURIComponent(thumbnailUrl)}`;
+    const baseUrl = getApiBaseUrl();
+    const proxyUrl = `${baseUrl}/api/proxy-thumbnail?url=${encodeURIComponent(thumbnailUrl)}`;
     const res = await fetch(proxyUrl);
     if (res.ok) {
       const blob = await res.blob();
@@ -84,7 +128,8 @@ export async function fetchRealVideoBlob(
 ): Promise<Blob> {
   onProgress?.(10, `Connecting to video extraction engine (${quality})...`);
 
-  const downloadUrl = `/api/download-video?url=${encodeURIComponent(mediaUrl)}&quality=${encodeURIComponent(quality)}&title=${encodeURIComponent(title || 'Video')}`;
+  const baseUrl = getApiBaseUrl();
+  const downloadUrl = `${baseUrl}/api/download-video?url=${encodeURIComponent(mediaUrl)}&quality=${encodeURIComponent(quality)}&title=${encodeURIComponent(title || 'Video')}`;
 
   const res = await fetch(downloadUrl);
   if (!res.ok) {
@@ -144,7 +189,8 @@ export async function fetchRealAudioBlob(
     quality,
     title: title || 'Audio',
   });
-  const downloadUrl = `/api/download-audio?${params.toString()}`;
+  const baseUrl = getApiBaseUrl();
+  const downloadUrl = `${baseUrl}/api/download-audio?${params.toString()}`;
 
   onProgress?.(15, 'Waiting for yt-dlp to extract audio stream...');
 
@@ -223,12 +269,14 @@ export async function fetchPlayableVideoBlob(
 
   onProgress?.(15, 'Connecting to high-definition MP4 stream...');
 
+  const baseUrl = getApiBaseUrl();
+
   // Try the server video generator with original thumbnail first if available
   let response: Response | null = null;
   if (thumbnailUrl && title) {
     try {
       onProgress?.(30, 'Preparing H.264 video container with original thumbnail...');
-      const genUrl = `/api/generate-video?thumbUrl=${encodeURIComponent(thumbnailUrl)}&title=${encodeURIComponent(title)}`;
+      const genUrl = `${baseUrl}/api/generate-video?thumbUrl=${encodeURIComponent(thumbnailUrl)}&title=${encodeURIComponent(title)}`;
       const res = await fetch(genUrl);
       const ct = res.headers.get('content-type') || '';
       if (res.ok && (ct.includes('video/mp4') || ct.includes('video/'))) {
@@ -243,7 +291,7 @@ export async function fetchPlayableVideoBlob(
   if (!response) {
     try {
       onProgress?.(45, 'Connecting to master 1080p stream...');
-      const streamUrl = `/api/video-stream?quality=${encodeURIComponent(quality)}`;
+      const streamUrl = `${baseUrl}/api/video-stream?quality=${encodeURIComponent(quality)}`;
       const res = await fetch(streamUrl);
       const ct = res.headers.get('content-type') || '';
       if (res.ok && (ct.includes('video/mp4') || ct.includes('video/'))) {
@@ -257,7 +305,7 @@ export async function fetchPlayableVideoBlob(
   // Fallback to static media route
   if (!response) {
     try {
-      const res = await fetch('/media/master_1080p.mp4');
+      const res = await fetch(`${baseUrl}/media/master_1080p.mp4`);
       const ct = res.headers.get('content-type') || '';
       if (res.ok && (ct.includes('video/mp4') || ct.includes('video/'))) {
         response = res;
